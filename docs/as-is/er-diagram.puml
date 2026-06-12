@@ -1,0 +1,44 @@
+@startuml
+!define TABLE(name) entity name << (T,#FFAAAA) >>
+!define PK(x) <u>x</u>
+
+skinparam monochrome true
+skinparam entity {
+  BackgroundColor White
+  BorderColor Black
+  ArrowColor Black
+  AttributeBackground White
+}
+skinparam linetype ortho
+
+title ER-диаграмма Smart Home Monolith (As-Is)
+
+TABLE(devices) {
+  PK(id) : integer [PK, SERIAL]
+  --
+  name : varchar(100) [NOT NULL]
+  type : varchar(50) [NOT NULL]
+  location : varchar(100) [NOT NULL]
+  value : float [DEFAULT 0]
+  unit : varchar(20)
+  status : varchar(20) [NOT NULL, DEFAULT 'inactive']
+  last_updated : timestamp with time zone [NOT NULL, DEFAULT NOW()]
+  created_at : timestamp with time zone [NOT NULL, DEFAULT NOW()]
+}
+
+note right: Таблица устройств.\nХранит конфигурацию устройств и их\nтекущие показания.
+
+TABLE(telemetry) {
+  PK(id) : integer [PK, SERIAL]
+  --
+  device_id : integer [NOT NULL]
+  value : float [NOT NULL]
+  unit : varchar(20) [NOT NULL, DEFAULT 'celsius']
+  timestamp : timestamp with time zone [NOT NULL, DEFAULT NOW()]
+}
+
+note right: Таблица телеметрии.\nХранит историю показаний устройств.
+
+devices ||--o{ telemetry : "has"
+
+@enduml

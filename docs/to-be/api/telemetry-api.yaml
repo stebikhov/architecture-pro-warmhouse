@@ -1,0 +1,275 @@
+openapi: 3.0.3
+info:
+  title: Telemetry Service API
+  description: API для сбора, обработки и хранения показаний датчиков
+  version: 1.0.0
+  contact:
+    name: Smart Home Team
+servers:
+  - url: http://localhost:8083/api/v1
+    description: Локальный сервер разработки
+tags:
+  - name: telemetry
+    description: Операции с телеметрией
+  - name: stats
+    description: Статистика и агрегация данных
+paths:
+  /telemetry/{deviceId}:
+    get:
+      tags:
+        - telemetry
+      summary: Получить телеметрию устройства
+      description: Возвращает последние показания указанного датчика
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+          description: Количество записей для возврата
+      responses:
+        '200':
+          description: Данные телеметрии получены
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TelemetryData'
+        '404':
+          description: Устройство не найдено
+  /telemetry/{deviceId}/history:
+    get:
+      tags:
+        - telemetry
+      summary: Получить историю показаний устройства
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: Начало временного диапазона
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: Конец временного диапазона
+        - name: interval
+          in: query
+          schema:
+            type: string
+            enum:
+              - 1m
+              - 5m
+              - 15m
+              - 1h
+              - 1d
+          description: Интервал агрегации данных
+      responses:
+        '200':
+          description: История получена
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TelemetryHistory'
+        '400':
+          description: Некорректные параметры запроса
+  /telemetry:
+    post:
+      tags:
+        - telemetry
+      summary: Отправить показания датчика
+      description: Принимает показания от устройств для сохранения
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetrySubmit'
+      responses:
+        '201':
+          description: Данные сохранены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryAck'
+        '400':
+          description: Некорректные данные
+  /telemetry/stats:
+    get:
+      tags:
+        - stats
+      summary: Получить статистику по устройствам
+      description: Возвращает агрегированную статистику по всем устройствам или по конкретному типу
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - temperature
+              - humidity
+              - motion
+          description: Тип устройств для статистики
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum:
+              - 1h
+              - 24h
+              - 7d
+              - 30d
+          description: Период для расчёта статистики
+      responses:
+        '200':
+          description: Статистика получена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryStats'
+  /ws/telemetry:
+    get:
+      tags:
+        - telemetry
+      summary: WebSocket подключение для realtime обновлений
+      description: Устанавливает WebSocket соединение для получения обновлений телеметрии в реальном времени
+      parameters:
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+          description: ID устройства для подписки (если не указан - все устройства)
+      responses:
+        '101':
+          description: WebSocket switched protocols
+        '400':
+          description: Некорректный запрос WebSocket
+components:
+  schemas:
+    TelemetryData:
+      type: object
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: integer
+        value:
+          type: number
+          format: float
+        unit:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        quality:
+          type: string
+          enum:
+            - good
+            - uncertain
+            - bad
+    TelemetryHistory:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        avgValue:
+          type: number
+          format: float
+        minValue:
+          type: number
+          format: float
+        maxValue:
+          type: number
+          format: float
+        count:
+          type: integer
+    TelemetrySubmit:
+      type: object
+      required:
+        - deviceId
+        - value
+        - timestamp
+      properties:
+        deviceId:
+          type: integer
+        value:
+          type: number
+          format: float
+        unit:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        quality:
+          type: string
+          enum:
+            - good
+            - uncertain
+            - bad
+    TelemetryAck:
+      type: object
+      properties:
+        success:
+          type: boolean
+        messageId:
+          type: string
+          format: uuid
+        stored:
+          type: boolean
+    TelemetryStats:
+      type: object
+      properties:
+        period:
+          type: string
+        deviceCount:
+          type: integer
+        totalReadings:
+          type: integer
+        averageValue:
+          type: number
+          format: float
+        minValue:
+          type: number
+          format: float
+        maxValue:
+          type: number
+          format: float
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceStat'
+    DeviceStat:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+        name:
+          type: string
+        readingCount:
+          type: integer
+        avgValue:
+          type: number
+          format: float
+        lastReading:
+          type: string
+          format: date-time

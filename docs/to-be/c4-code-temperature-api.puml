@@ -1,0 +1,30 @@
+@startuml
+title API Температуры — Диаграмма классов
+
+class TemperatureResponse {
+    +sensor_id: str
+    +location: str
+    +value: float
+    +unit: str
+    +status: str
+    +timestamp: str
+}
+
+class SensorMapping {
+    -sensor_to_location: dict[int, str]
+    -location_to_sensor: dict[str, int]
+    +get_location(sensor_id: int): str
+    +get_sensor_id(location: str): int
+}
+
+class FastAPIApp {
+    +get_temperature(location: str, sensor_id: int): TemperatureResponse
+    +get_temperature_by_id(sensor_id: int): TemperatureResponse
+    +health_check(): dict
+    -generate_random_value(): float
+}
+
+FastAPIApp ..> SensorMapping
+FastAPIApp --> TemperatureResponse
+
+@enduml

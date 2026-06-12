@@ -1,0 +1,92 @@
+@startuml
+title Device Management Service - Class Diagram
+
+' Перечисления
+enum DeviceStatus {
+    active
+    inactive
+    offline
+}
+
+' DTO для запросов
+class DeviceCreate {
+    +Name: string
+    +Type: string
+    +Location: string
+    +Status?: DeviceStatus
+}
+
+class DeviceUpdate {
+    +Name?: string
+    +Type?: string
+    +Location?: string
+    +Status?: DeviceStatus
+}
+
+' Внутренние DTO
+class WebhookPayload {
+    +Event: string
+    +DeviceID: int
+    +Device: Device
+    +Timestamp: string
+}
+
+' Основная сущность
+class Device {
+    +ID: int
+    +Name: string
+    +Type: string
+    +Location: string
+    +Status: DeviceStatus
+    +LastUpdated: time.Time
+    +CreatedAt: time.Time
+}
+
+' Слой репозитория
+class DeviceRepository {
+    +GetAll(): List<Device>
+    +GetByID(id): Device
+    +Create(data): Device
+    +Update(id, data): Device
+    +Delete(id): bool
+}
+
+' Сервисный слой
+class DeviceService {
+    +GetAllDevices(): List<Device>
+    +GetDeviceByID(id): Device
+    +CreateDevice(data): Device
+    +UpdateDevice(id, data): Device
+    +DeleteDevice(id): bool
+    +GetDeviceStatus(id): DeviceStatus
+    -sendWebhook(event, device): void
+}
+
+' Контроллер (Handler)
+class DeviceHandler {
+    +GetDevices()
+    +GetDeviceByID(id)
+    +CreateDevice(data)
+    +UpdateDevice(id, data)
+    +DeleteDevice(id)
+    +GetDeviceStatus(id)
+}
+
+' Связи
+Device "1" -- "0..*" DeviceStatus : has >
+DeviceRepository --> Device : maps to/from
+DeviceService --> DeviceRepository : uses
+DeviceHandler --> DeviceService : uses
+
+DeviceHandler ..> DeviceCreate : binds from JSON
+DeviceHandler ..> DeviceUpdate : binds from JSON
+
+DeviceService --> WebhookPayload : creates for webhooks
+DeviceService ..> Device : returns
+
+note right of DeviceService
+  Webhooks отправляются при событиях жизненного цикла устройства:
+  device.created, device.updated, device.deleted.
+  Webhooks POST в telemetry-service.
+end note
+@enduml

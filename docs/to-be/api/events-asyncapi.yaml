@@ -1,0 +1,528 @@
+asyncapi: 2.6.0
+info:
+  title: Smart Home Events
+  version: 1.0.0
+  description: Асинхронные события между микросервисами Smart Home системы
+  contact:
+    name: Smart Home Team
+  license:
+    name: MIT
+servers:
+  development:
+    url: localhost:5672
+    protocol: amqp
+    description: Локальный RabbitMQ сервер
+  production:
+    url: rabbitmq.smart-home.local:5672
+    protocol: amqp
+    description: Продакшен RabbitMQ кластер
+defaultContentType: application/json
+tags:
+  - name: device
+    description: События, связанные с устройствами
+  - name: telemetry
+    description: События телеметрии
+  - name: temperature
+    description: События температуры
+  - name: alert
+    description: События алертов
+  - name: notification
+    description: События уведомлений
+channels:
+  device/created:
+    description: Событие публикуется при создании нового устройства
+    subscribe:
+      summary: Получение события создания устройства
+      operationId: onDeviceCreated
+      tags:
+        - device
+      message:
+        $ref: '#/components/messages/DeviceCreated'
+    publish:
+      summary: Публикация события создания устройства
+      operationId: publishDeviceCreated
+      tags:
+        - device
+      message:
+        $ref: '#/components/messages/DeviceCreated'
+  device/updated:
+    description: Событие публикуется при обновлении устройства
+    subscribe:
+      summary: Получение события обновления устройства
+      operationId: onDeviceUpdated
+      tags:
+        - device
+      message:
+        $ref: '#/components/messages/DeviceUpdated'
+    publish:
+      summary: Публикация события обновления устройства
+      operationId: publishDeviceUpdated
+      tags:
+        - device
+      message:
+        $ref: '#/components/messages/DeviceUpdated'
+  device/deleted:
+    description: Событие публикуется при удалении устройства
+    subscribe:
+      summary: Получение события удаления устройства
+      operationId: onDeviceDeleted
+      tags:
+        - device
+      message:
+        $ref: '#/components/messages/DeviceDeleted'
+    publish:
+      summary: Публикация события удаления устройства
+      operationId: publishDeviceDeleted
+      tags:
+        - device
+      message:
+        $ref: '#/components/messages/DeviceDeleted'
+  telemetry/received:
+    description: Событие публикуется при получении новых показаний от устройства
+    subscribe:
+      summary: Получение события телеметрии
+      operationId: onTelemetryReceived
+      tags:
+        - telemetry
+      message:
+        $ref: '#/components/messages/TelemetryReceived'
+    publish:
+      summary: Публикация события телеметрии
+      operationId: publishTelemetryReceived
+      tags:
+        - telemetry
+      message:
+        $ref: '#/components/messages/TelemetryReceived'
+  telemetry/threshold-exceeded:
+    description: Событие публикуется при превышении порога значений телеметрии
+    subscribe:
+      summary: Получение события превышения порога
+      operationId: onThresholdExceeded
+      tags:
+        - telemetry
+      message:
+        $ref: '#/components/messages/ThresholdExceeded'
+    publish:
+      summary: Публикация события превышения порога
+      operationId: publishThresholdExceeded
+      tags:
+        - telemetry
+      message:
+        $ref: '#/components/messages/ThresholdExceeded'
+  temperature/updated:
+    description: Событие публикуется при обновлении data о температуре
+    subscribe:
+      summary: Получение события обновления температуры
+      operationId: onTemperatureUpdated
+      tags:
+        - temperature
+      message:
+        $ref: '#/components/messages/TemperatureUpdated'
+    publish:
+      summary: Публикация события обновления температуры
+      operationId: publishTemperatureUpdated
+      tags:
+        - temperature
+      message:
+        $ref: '#/components/messages/TemperatureUpdated'
+  alert/triggered:
+    description: Событие публикуется при срабатывании алерта
+    subscribe:
+      summary: Получение события срабатывания алерта
+      operationId: onAlertTriggered
+      tags:
+        - alert
+      message:
+        $ref: '#/components/messages/AlertTriggered'
+    publish:
+      summary: Публикация события срабатывания алерта
+      operationId: publishAlertTriggered
+      tags:
+        - alert
+      message:
+        $ref: '#/components/messages/AlertTriggered'
+  alert/resolved:
+    description: Событие публикуется при разрешении алерта
+    subscribe:
+      summary: Получение события разрешения алерта
+      operationId: onAlertResolved
+      tags:
+        - alert
+      message:
+        $ref: '#/components/messages/AlertResolved'
+    publish:
+      summary: Публикация события разрешения алерта
+      operationId: publishAlertResolved
+      tags:
+        - alert
+      message:
+        $ref: '#/components/messages/AlertResolved'
+  notification/send:
+    description: Событие для отправки уведомления пользователю
+    subscribe:
+      summary: Получение запроса на отправку уведомления
+      operationId: onNotificationSend
+      tags:
+        - notification
+      message:
+        $ref: '#/components/messages/NotificationSend'
+    publish:
+      summary: Публикация запроса на отправку уведомления
+      operationId: publishNotificationSend
+      tags:
+        - notification
+      message:
+        $ref: '#/components/messages/NotificationSend'
+components:
+  messages:
+    DeviceCreated:
+      name: DeviceCreated
+      title: Устройство создано
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            enum:
+              - device.created
+          timestamp:
+            type: string
+            format: date-time
+          source:
+            type: string
+            description: Сервис-источник события
+          data:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              type:
+                type: string
+              location:
+                type: string
+              unit:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+      correlationId:
+        description: ID для отслеживания цепочки событий
+        location: $message.payload#/eventId
+    DeviceUpdated:
+      name: DeviceUpdated
+      title: Устройство обновлено
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            enum:
+              - device.updated
+          timestamp:
+            type: string
+            format: date-time
+          source:
+            type: string
+          data:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              location:
+                type: string
+              status:
+                type: string
+              updatedAt:
+                type: string
+                format: date-time
+    DeviceDeleted:
+      name: DeviceDeleted
+      title: Устройство удалено
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            enum:
+              - device.deleted
+          timestamp:
+            type: string
+            format: date-time
+          source:
+            type: string
+          data:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              deletedAt:
+                type: string
+                format: date-time
+    TelemetryReceived:
+      name: TelemetryReceived
+      title: Получена телеметрия
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            enum:
+              - telemetry.received
+          timestamp:
+            type: string
+            format: date-time
+          source:
+            type: string
+          data:
+            type: object
+            properties:
+              deviceId:
+                type: string
+                format: uuid
+              value:
+                type: number
+                format: float
+              unit:
+                type: string
+              quality:
+                type: string
+                enum:
+                  - good
+                  - uncertain
+                  - bad
+    ThresholdExceeded:
+      name: ThresholdExceeded
+      title: Превышен порог
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            enum:
+              - threshold.exceeded
+          timestamp:
+            type: string
+            format: date-time
+          source:
+            type: string
+          data:
+            type: object
+            properties:
+              deviceId:
+                type: string
+                format: uuid
+              deviceName:
+                type: string
+              currentValue:
+                type: number
+                format: float
+              thresholdValue:
+                type: number
+                format: float
+              thresholdType:
+                type: string
+                enum:
+                  - min
+                  - max
+              severity:
+                type: string
+                enum:
+                  - low
+                  - medium
+                  - high
+                  - critical
+    TemperatureUpdated:
+      name: TemperatureUpdated
+      title: Температура обновлена
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            enum:
+              - temperature.updated
+          timestamp:
+            type: string
+            format: date-time
+          source:
+            type: string
+          data:
+            type: object
+            properties:
+              location:
+                type: string
+              sensorId:
+                type: string
+              value:
+                type: number
+                format: float
+              unit:
+                type: string
+              status:
+                type: string
+                enum:
+                  - normal
+                  - warning
+                  - critical
+    AlertTriggered:
+      name: AlertTriggered
+      title: Алерт сработал
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            enum:
+              - alert.triggered
+          timestamp:
+            type: string
+            format: date-time
+          source:
+            type: string
+          data:
+            type: object
+            properties:
+              alertId:
+                type: string
+                format: uuid
+              location:
+                type: string
+              sensorId:
+                type: string
+              currentValue:
+                type: number
+                format: float
+              thresholdValue:
+                type: number
+                format: float
+              severity:
+                type: string
+                enum:
+                  - low
+                  - medium
+                  - high
+                  - critical
+              triggeredAt:
+                type: string
+                format: date-time
+    AlertResolved:
+      name: AlertResolved
+      title: Алерт разрешён
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            enum:
+              - alert.resolved
+          timestamp:
+            type: string
+            format: date-time
+          source:
+            type: string
+          data:
+            type: object
+            properties:
+              alertId:
+                type: string
+                format: uuid
+              location:
+                type: string
+              resolvedAt:
+                type: string
+                format: date-time
+              reason:
+                type: string
+    NotificationSend:
+      name: NotificationSend
+      title: Отправить уведомление
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:
+            type: string
+            format: uuid
+          eventType:
+            type: string
+            enum:
+              - notification.send
+          timestamp:
+            type: string
+            format: date-time
+          source:
+            type: string
+          data:
+            type: object
+            properties:
+              userId:
+                type: string
+                format: uuid
+              title:
+                type: string
+              message:
+                type: string
+              type:
+                type: string
+                enum:
+                  - alert
+                  - info
+                  - warning
+                  - error
+              channels:
+                type: array
+                items:
+                  type: string
+                  enum:
+                    - email
+                    - push
+                    - sms
+                    - web
+              priority:
+                type: string
+                enum:
+                  - low
+                  - normal
+                  - high
+                default: normal

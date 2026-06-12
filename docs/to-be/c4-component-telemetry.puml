@@ -1,0 +1,29 @@
+@startuml diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Telemetry Service - Component Diagram (C4 Level 3)
+
+Container_Boundary(telemetry_svc, "Telemetry Service") {
+    Container(telemetry_api, "Telemetry API", "Gin", "REST и WebSocket endpoints для телеметрии")
+    
+    Container(telemetry_service, "Telemetry Service", "Business Logic", "Оркестрация бизнес-логики и интеграций")
+    ContainerDb(telemetry_repo, "Telemetry Repository", "Data Access Layer", "CRUD операции с данными телеметрии")
+    
+    ContainerDb(telemetry_db, "Telemetry DB", "PostgreSQL", "Хранение показаний датчиков")
+}
+
+System_Ext(device_mgmt, "Device Management", "Синхронизация устройств и алерты")
+System_Ext(temp_monitoring, "Temperature Monitoring", "Получение данных температуры")
+
+Rel(telemetry_api, telemetry_service, "Делегирует запросы")
+Rel(telemetry_service, telemetry_repo, "Использует")
+Rel(telemetry_repo, telemetry_db, "Чтение/запись", "PostgreSQL Protocol")
+
+Rel(telemetry_service, device_mgmt, "Отправляет алерты при превышении порогов", "HTTP POST")
+Rel(telemetry_service, temp_monitoring, "Запрашивает данные температуры", "HTTP GET")
+
+Rel(telemetry_api, device_mgmt, "Получает метаданные устройств", "HTTP")
+
+@enduml

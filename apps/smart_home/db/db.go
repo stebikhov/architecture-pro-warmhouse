@@ -42,7 +42,7 @@ func (db *DB) Close() {
 func (db *DB) GetSensors(ctx context.Context) ([]models.Sensor, error) {
 	query := `
 		SELECT id, name, type, location, value, unit, status, last_updated, created_at
-		FROM sensors
+		FROM devices
 		ORDER BY id
 	`
 
@@ -83,7 +83,7 @@ func (db *DB) GetSensors(ctx context.Context) ([]models.Sensor, error) {
 func (db *DB) GetSensorByID(ctx context.Context, id int) (models.Sensor, error) {
 	query := `
 		SELECT id, name, type, location, value, unit, status, last_updated, created_at
-		FROM sensors
+		FROM devices
 		WHERE id = $1
 	`
 
@@ -109,7 +109,7 @@ func (db *DB) GetSensorByID(ctx context.Context, id int) (models.Sensor, error) 
 // CreateSensor creates a new sensor in the database
 func (db *DB) CreateSensor(ctx context.Context, s models.SensorCreate) (models.Sensor, error) {
 	query := `
-		INSERT INTO sensors (name, type, location, unit, status, last_updated, created_at)
+		INSERT INTO devices (name, type, location, unit, status, last_updated, created_at)
 		VALUES ($1, $2, $3, $4, 'inactive', $5, $5)
 		RETURNING id, name, type, location, value, unit, status, last_updated, created_at
 	`
@@ -149,7 +149,7 @@ func (db *DB) UpdateSensor(ctx context.Context, id int, s models.SensorUpdate) (
 	}
 
 	// Build the update query dynamically based on which fields are provided
-	query := "UPDATE sensors SET last_updated = $1"
+	query := "UPDATE devices SET last_updated = $1"
 	args := []interface{}{time.Now()}
 	argCount := 2
 
@@ -215,7 +215,7 @@ func (db *DB) UpdateSensor(ctx context.Context, id int, s models.SensorUpdate) (
 
 // DeleteSensor deletes a sensor by its ID
 func (db *DB) DeleteSensor(ctx context.Context, id int) error {
-	query := "DELETE FROM sensors WHERE id = $1"
+	query := "DELETE FROM devices WHERE id = $1"
 	result, err := db.Pool.Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("error deleting sensor: %w", err)
@@ -231,7 +231,7 @@ func (db *DB) DeleteSensor(ctx context.Context, id int) error {
 // UpdateSensorValue updates the value and status of a sensor
 func (db *DB) UpdateSensorValue(ctx context.Context, id int, value float64, status string) error {
 	query := `
-		UPDATE sensors
+		UPDATE devices
 		SET value = $1, status = $2, last_updated = $3
 		WHERE id = $4
 	`
