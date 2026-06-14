@@ -3,35 +3,26 @@
 
 LAYOUT_WITH_LEGEND()
 
-title Temperature Monitoring Service - Component Diagram (C4 Level 3)
+title Smart Home API - Component Diagram (C4 Level 3)
 
-Container_Boundary(temp_monitoring, "Temperature Monitoring Service") {
-    Container(temp_api, "Temperature API", "Express.js", "REST API для получения данных о температуре")
+Container_Boundary(smart_home, "Smart Home API (Go + Gin : 8080)") {
+    Container(sensor_api, "Sensor API", "Gin", "REST endpoints для управления сенсорами и получения температуры")
     
-    Container(api_handler, "API Handler", "Request Handler", "Обработка входящих HTTP запросов")
-    Container(cache_manager, "Cache Manager", "Redis Cache", "Кэширование данных температуры")
-    Container(external_api_client, "External API Client", "HTTP Client", "Взаимодействие с внешним Temperature API")
-    Container(data_transformer, "Data Transformer", "Data Mapper", "Трансформация и нормализация данных")
+    Container(sensor_handler, "SensorHandler", "Handler", "Обработка HTTP запросов сенсоров")
+    Container(temperature_service, "TemperatureService", "HTTP Client", "Внешний HTTP клиент для Temperature API")
+    ContainerDb(sensor_repo, "Sensor Repository", "Data Access Layer", "CRUD операции с сенсорами")
     
-    ContainerDb(temp_repo, "Temperature Repository", "Data Access Layer", "CRUD операции с данными температуры")
-    Container(event_producer, "Event Producer", "AMQP Publisher", "Публикация событий температуры")
-    
-    ContainerQueue(message_broker, "Message Broker", "RabbitMQ", "Асинхронная коммуникация")
+    ContainerDb(sensor_db, "Smart Home DB", "PostgreSQL", "Хранение сенсоров")
 }
 
 System_Ext(external_temp_api, "External Temperature API", "Внешний сервис", "Данные о температуре")
-System_Ext(telemetry_svc, "Telemetry Service", "Поставщик данных телеметрии")
 
-Rel(temp_api, api_handler, "Обрабатывает запросы")
-Rel(api_handler, cache_manager, "Проверяет кэш")
-Rel(api_handler, external_api_client, "Запрашивает данные")
-Rel(external_api_client, external_temp_api, "HTTP GET", "REST API")
-Rel(external_api_client, data_transformer, "Трансформирует ответ")
-Rel(data_transformer, temp_repo, "Сохраняет данные")
-Rel(data_transformer, event_producer, "Генерирует события")
-Rel(event_producer, message_broker, "Публикует", "AMQP")
+Rel(sensor_api, sensor_handler, "Делегирует запросы")
+Rel(sensor_handler, temperature_service, "Использует")
+Rel(sensor_handler, sensor_repo, "Использует")
+Rel(sensor_repo, sensor_db, "Чтение/запись", "PostgreSQL Protocol")
 
-Rel(telemetry_svc, temp_api, "Запрашивает данные", "gRPC")
-Rel(cache_manager, telemetry_svc, "Синхронизирует кэш", "gRPC")
+Rel(temperature_service, external_temp_api, "GET /temperature", "HTTP/REST")
+Rel(temperature_service, external_temp_api, "GET /temperature/:id", "HTTP/REST")
 
 @enduml

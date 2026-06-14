@@ -41,7 +41,7 @@ paths:
             enum:
               - active
               - inactive
-              - error
+              - offline
           description: Фильтр по статусу
       responses:
         '200':
@@ -165,6 +165,9 @@ components:
       properties:
         id:
           type: integer
+        room_id:
+          type: integer
+          nullable: true
         name:
           type: string
         type:
@@ -179,19 +182,90 @@ components:
             - outlet
             - valve
             - other
-        location:
+        manufacturer:
           type: string
-        unit:
+        model:
           type: string
-          default: celsius
+        serial_number:
+          type: string
+        firmware_version:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - offline
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    DeviceCreate:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        room_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - sensor
+            - lamp
+            - lock
+            - thermostat
+            - camera
+            - switch
+            - outlet
+            - valve
+            - other
+        manufacturer:
+          type: string
+        model:
+          type: string
+        serial_number:
+          type: string
+        firmware_version:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - offline
     DeviceUpdate:
       type: object
       properties:
+        room_id:
+          type: integer
+          nullable: true
         name:
           type: string
-        location:
+        type:
           type: string
-        unit:
+          enum:
+            - sensor
+            - lamp
+            - lock
+            - thermostat
+            - camera
+            - switch
+            - outlet
+            - valve
+            - other
+        manufacturer:
+          type: string
+        model:
+          type: string
+        serial_number:
+          type: string
+        firmware_version:
           type: string
         status:
           type: string

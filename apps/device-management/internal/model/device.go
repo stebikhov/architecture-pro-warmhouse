@@ -25,27 +25,37 @@ const (
 )
 
 type Device struct {
-	ID          int          `json:"id"`
-	Name        string       `json:"name"`
-	Type        DeviceType   `json:"type"`
-	Location    string       `json:"location"`
-	Value       float64      `json:"value"`
-	Unit        string       `json:"unit"`
-	Status      DeviceStatus `json:"status"`
-	LastUpdated time.Time    `json:"last_updated"`
-	CreatedAt   time.Time    `json:"created_at"`
+	ID              int          `json:"id"`
+	RoomID          *int         `json:"room_id"`
+	Name            string       `json:"name"`
+	Type            DeviceType   `json:"type"`
+	Manufacturer    string       `json:"manufacturer"`
+	Model           string       `json:"model"`
+	SerialNumber    string       `json:"serial_number"`
+	FirmwareVersion string       `json:"firmware_version"`
+	Status          DeviceStatus `json:"status"`
+	CreatedAt       time.Time    `json:"created_at"`
+	UpdatedAt       time.Time    `json:"updated_at"`
 }
 
 type DeviceCreate struct {
-	Name     string       `json:"name" binding:"required"`
-	Type     DeviceType   `json:"type" binding:"required"`
-	Location string       `json:"location" binding:"required"`
-	Status   DeviceStatus `json:"status"`
+	RoomID          *int         `json:"room_id"`
+	Name            string       `json:"name" binding:"required"`
+	Type            DeviceType   `json:"type" binding:"required"`
+	Manufacturer    string       `json:"manufacturer"`
+	Model           string       `json:"model"`
+	SerialNumber    string       `json:"serial_number"`
+	FirmwareVersion string       `json:"firmware_version"`
+	Status          DeviceStatus `json:"status"`
 }
 
 type DeviceUpdate struct {
-	Name     string       `json:"name"`
-	Type     DeviceType   `json:"type"`
-	Location string       `json:"location"`
-	Status   DeviceStatus `json:"status"`
+	RoomID          *int         `json:"room_id"`
+	Name            string       `json:"name"`
+	Type            DeviceType   `json:"type"`
+	Manufacturer    string       `json:"manufacturer"`
+	Model           string       `json:"model"`
+	SerialNumber    string       `json:"serial_number"`
+	FirmwareVersion string       `json:"firmware_version"`
+	Status          DeviceStatus `json:"status"`
 }

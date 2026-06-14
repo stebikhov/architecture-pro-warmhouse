@@ -1,7 +1,6 @@
 @startuml diagram
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
-LAYOUT_WITH_LEGEND()
 
 title Device Management Service - Component Diagram (C4 Level 3)
 

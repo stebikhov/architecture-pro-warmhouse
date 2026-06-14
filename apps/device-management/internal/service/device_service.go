@@ -88,7 +88,7 @@ func (s *DeviceService) sendWebhook(ctx context.Context, event string, device mo
 		Event:     event,
 		DeviceID:  device.ID,
 		Device:    device,
-		Timestamp: device.LastUpdated.Format("2006-01-02T15:04:05Z07:00"),
+		Timestamp: device.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	body, err := json.Marshal(payload)

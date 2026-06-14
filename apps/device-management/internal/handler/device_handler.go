@@ -130,7 +130,7 @@ func (h *DeviceHandler) GetDeviceStatus(c *gin.Context) {
 		"device_id": device.ID,
 		"status":    device.Status,
 		"name":      device.Name,
-		"location":  device.Location,
+		"room_id":   device.RoomID,
 	})
 }
 

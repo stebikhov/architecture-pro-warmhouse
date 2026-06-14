@@ -1,7 +1,6 @@
 ﻿@startuml diagram
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
-LAYOUT_WITH_LEGEND()
 
 title Smart Home System - Container Diagram (C4 Level 2) - To-Be Architecture
 
@@ -11,38 +10,30 @@ Person(admin, "Администратор", "Технический специа
 System_Boundary(smart_home, "Smart Home Ecosystem") {
     Container(spa, "SPA", "React", "Веб-интерфейс для управления устройствами и просмотра телеметрии")
     
-    Container(device_mgmt, "Device Management Service", "Go + Gin", "Управление жизненным циклом устройств, CRUD операции с датчиками")
-    Container(telemetry_svc, "Telemetry Service", "Go + Gin", "Сбор, обработка и хранение показаний датчиков")
-    Container(temp_monitoring, "Temperature Monitoring Service", "Node.js + Express", "Мониторинг температуры, интеграция с внешними API")
-    Container(notification_svc, "Notification Service", "Java + Spring Boot", "Уведомления о событиях и алертах")
+    Container(smart_home_api, "Smart Home API", "Go + Gin : 8080", "Управление сенсорами, интеграция с внешним Temperature API")
+    Container(device_mgmt, "Device Management Service", "Go + Gin : 8082", "Управление жизненным циклом устройств, CRUD операции")
+    Container(telemetry_svc, "Telemetry Service", "Go + Gin : 8083", "Сбор, обработка и хранение показаний датчиков")
     
+    ContainerDb(smart_home_db, "Smart Home DB", "PostgreSQL", "Хранение данных сенсоров и температурных показаний")
     ContainerDb(device_db, "Device DB", "PostgreSQL", "Хранение конфигурации устройств и их метаданных")
     ContainerDb(telemetry_db, "Telemetry DB", "TimescaleDB", "Временные ряды показаний датчиков")
-    
-    ContainerQueue(message_broker, "Message Broker", "RabbitMQ", "Асинхронная коммуникация между сервисами")
 }
 
 System_Ext(external_temp_api, "External Temperature API", "Внешний сервис", "Данные о температуре в реальном времени")
-System_Ext(email_svc, "Email Service", "SMTP / SendGrid", "Отправка email уведомлений")
 
 Rel(user, spa, "Управляет устройствами", "HTTPS")
 Rel(admin, spa, "Настраивает систему", "HTTPS")
+Rel(spa, smart_home_api, "CRUD сенсоров + температура", "REST API")
 Rel(spa, device_mgmt, "CRUD устройств", "REST API")
 Rel(spa, telemetry_svc, "Получает телеметрию", "REST API")
-Rel(spa, temp_monitoring, "Запрашивает температуру", "REST API")
 
+Rel(smart_home_api, smart_home_db, "Чтение/запись", "PostgreSQL Protocol")
 Rel(device_mgmt, device_db, "Чтение/запись", "PostgreSQL Protocol")
 Rel(telemetry_svc, telemetry_db, "Чтение/запись", "PostgreSQL Protocol")
 
-Rel(device_mgmt, message_broker, "Публикует события устройств", "AMQP", "device.created, device.updated, device.deleted")
-Rel(telemetry_svc, message_broker, "Публикует события телеметрии", "AMQP", "telemetry.received, threshold.exceeded")
-Rel(temp_monitoring, message_broker, "Публикует события температуры", "AMQP", "temperature.updated")
+Rel(smart_home_api, external_temp_api, "Запрашивает данные", "HTTP/REST")
 
-Rel(message_broker, notification_svc, "Потребляет события", "AMQP")
-Rel(notification_svc, email_svc, "Отправляет уведомления", "SMTP/API")
-
-Rel(temp_monitoring, external_temp_api, "Запрашивает данные", "HTTP/REST")
-Rel(telemetry_svc, temp_monitoring, "Синхронизирует данные", "gRPC")
-Rel(device_mgmt, telemetry_svc, "Синхронизация устройств", "gRPC")
+Rel(device_mgmt, telemetry_svc, "Webhook: device.created/updated/deleted", "HTTP POST")
+Rel(telemetry_svc, device_mgmt, "Webhook: threshold.exceeded", "HTTP POST")
 
 @enduml

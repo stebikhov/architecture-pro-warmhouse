@@ -1,4 +1,4 @@
-@startuml
+@startuml to-be
 skinparam monochrome true
 skinparam entity {
   BackgroundColor White
@@ -10,29 +10,105 @@ skinparam linetype ortho
 
 title ER-диаграмма Smart Home System (To-Be)
 
-entity devices << (T,#FFAAAA) >> {
+entity users << (U,#DDDDDD) >> {
   id : integer [PK]
   --
+  email : varchar(255) [NOT NULL, UNIQUE]
+  password_hash : varchar(255) [NOT NULL]
+  first_name : varchar(100)
+  last_name : varchar(100)
+  phone : varchar(20)
+  created_at : timestamp with time zone [NOT NULL]
+  updated_at : timestamp with time zone [NOT NULL]
+}
+
+entity houses << (H,#DDDDDD) >> {
+  id : integer [PK]
+  --
+  owner_id : integer [FK, NOT NULL]
+  name : varchar(100) [NOT NULL]
+  address : varchar(255)
+  created_at : timestamp with time zone [NOT NULL]
+  updated_at : timestamp with time zone [NOT NULL]
+}
+
+entity rooms << (R,#DDDDDD) >> {
+  id : integer [PK]
+  --
+  house_id : integer [FK, NOT NULL]
+  name : varchar(100) [NOT NULL]
+  floor : integer
+  area_sqm : float
+  created_at : timestamp with time zone [NOT NULL]
+}
+
+entity devices << (D,#FFAAAA) >> {
+  id : integer [PK]
+  --
+  room_id : integer [FK]
   name : varchar(100) [NOT NULL]
   type : varchar(50) [NOT NULL]
-  location : varchar(100) [NOT NULL]
-  value : float
-  unit : varchar(20)
+  manufacturer : varchar(100)
+  model : varchar(100)
+  serial_number : varchar(100) [UNIQUE]
+  firmware_version : varchar(20)
   status : varchar(20) [NOT NULL]
-  last_updated : timestamp with time zone [NOT NULL]
   created_at : timestamp with time zone [NOT NULL]
+  updated_at : timestamp with time zone [NOT NULL]
 }
 
 entity telemetry << (T,#FFAAAA) >> {
   id : integer [PK]
   --
-  device_id : integer [FK]
+  device_id : integer [FK, NOT NULL]
   value : float [NOT NULL]
   unit : varchar(20) [NOT NULL]
   timestamp : timestamp with time zone [NOT NULL]
 }
 
+entity alerts << (A,#FFDDDD) >> {
+  id : integer [PK]
+  --
+  house_id : integer [FK, NOT NULL]
+  device_id : integer [FK]
+  user_id : integer [FK, NOT NULL]
+  type : varchar(50) [NOT NULL]
+  severity : varchar(20) [NOT NULL]
+  title : varchar(200) [NOT NULL]
+  message : text
+  status : varchar(20) [NOT NULL]
+  created_at : timestamp with time zone [NOT NULL]
+  resolved_at : timestamp with time zone
+}
+
+entity notification_templates << (N,#DDDDDD) >> {
+  id : integer [PK]
+  --
+  name : varchar(100) [NOT NULL]
+  event_type : varchar(50) [NOT NULL]
+  channel : varchar(20) [NOT NULL]
+  subject : varchar(200)
+  body : text [NOT NULL]
+  is_active : boolean [DEFAULT true]
+  created_at : timestamp with time zone [NOT NULL]
+}
+
+entity user_house << (UH,#EEEEEE) >> {
+  user_id : integer [PK, FK]
+  house_id : integer [PK, FK]
+  role : varchar(20) [NOT NULL]
+  created_at : timestamp with time zone [NOT NULL]
+}
+
+users ||--o{ houses : "owns"
+users ||--o{ user_house : "member of"
+houses ||--o{ user_house : "has members"
+houses ||--o{ rooms : "contains"
+rooms ||--o{ devices : "contains"
 devices ||--o{ telemetry : "generates"
+devices ||--o{ alerts : "triggers"
+houses ||--o{ alerts : "belongs to"
+users ||--o{ alerts : "receives"
 
 note right of devices
   device.type enum:
@@ -45,6 +121,40 @@ note right of devices
   * outlet (розетка)
   * valve (клапан)
   * other (прочее)
+end note
+
+note right of alerts
+  alert.severity enum:
+  * low (низкий)
+  * medium (средний)
+  * high (высокий)
+  * critical (критический)
+
+  alert.status enum:
+  * active (активен)
+  * acknowledged (подтвержден)
+  * resolved (решен)
+end note
+
+note right of user_house
+  role enum:
+  * owner (владелец)
+  * admin (администратор)
+  * member (участник)
+  * guest (гость)
+end note
+
+note right of notification_templates
+  channel enum:
+  * email (электронная почта)
+  * sms (СМС)
+  * push (push-уведомление)
+  * webhook (вебхук)
+
+  event_type examples:
+  * threshold.exceeded (превышение порога)
+  * device.offline (устройство офлайн)
+  * alert.triggered (срабатывание тревоги)
 end note
 
 @enduml

@@ -1,4 +1,4 @@
-@startuml
+@startuml Sensor Service
 title Sensor Service - Class Diagram
 
 enum SensorType {
@@ -7,45 +7,68 @@ enum SensorType {
 
 class Sensor {
     +ID: int
+    +RoomID: *int
     +Name: string
     +Type: SensorType
-    +Location: string
-    +Value: float64
-    +Unit: string
+    +Manufacturer: string
+    +Model: string
+    +SerialNumber: string
+    +FirmwareVersion: string
     +Status: string
-    +LastUpdated: time.Time
     +CreatedAt: time.Time
+    +UpdatedAt: time.Time
 }
 
 class SensorCreate {
+    +RoomID: *int
     +Name: string
     +Type: SensorType
-    +Location: string
-    +Unit: string
+    +Manufacturer: string
+    +Model: string
+    +SerialNumber: string
+    +FirmwareVersion: string
 }
 
 class SensorUpdate {
-    +Name?: string
-    +Type?: SensorType
-    +Location?: string
-    +Value?: float64
-    +Unit?: string
-    +Status?: string
+    +Name: string
+    +Type: SensorType
+    +Manufacturer: string
+    +Model: string
+    +SerialNumber: string
+    +FirmwareVersion: string
+    +Status: string
 }
 
 class SensorHandler {
     <<Handler>>
-    // HTTP request handling for sensor endpoints
+    +DB: *db.DB
+    +TemperatureService: *TemperatureService
+    +RegisterRoutes(router: *gin.RouterGroup)
+    +GetSensors()
+    +GetSensorByID(id: int)
+    +CreateSensor(data: SensorCreate)
+    +UpdateSensor(id: int, data: SensorUpdate)
+    +DeleteSensor(id: int)
+    +UpdateSensorValue(id: int, value: float64, status: string)
+    +GetTemperatureByLocation(location: string)
 }
 
 class TemperatureService {
     <<Service>>
-    // HTTP client for external temperature API
+    +BaseURL: string
+    +HTTPClient: *http.Client
+    +GetTemperature(location: string): *TemperatureResponse
+    +GetTemperatureByID(sensorID: string): *TemperatureResponse
 }
 
 class DB {
     <<Repository>>
-    // PostgreSQL access via pgxpool
+    +GetSensors(ctx): List<Sensor>
+    +GetSensorByID(ctx, id): Sensor
+    +CreateSensor(ctx, data): Sensor
+    +UpdateSensor(ctx, id, data): Sensor
+    +DeleteSensor(ctx, id): error
+    +UpdateSensorValue(ctx, id, value, status): error
 }
 
 Sensor "1" -- "0..*" SensorType : has

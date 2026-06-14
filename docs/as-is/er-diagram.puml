@@ -1,4 +1,4 @@
-@startuml
+@startuml as-is
 !define TABLE(name) entity name << (T,#FFAAAA) >>
 !define PK(x) <u>x</u>
 

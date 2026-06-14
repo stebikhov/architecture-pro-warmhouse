@@ -11,19 +11,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// DB represents the database connection
 type DB struct {
 	Pool *pgxpool.Pool
 }
 
-// New creates a new DB instance
 func New(connString string) (*DB, error) {
 	pool, err := pgxpool.New(context.Background(), connString)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to database: %w", err)
 	}
 
-	// Test the connection
 	if err := pool.Ping(context.Background()); err != nil {
 		return nil, fmt.Errorf("unable to ping database: %w", err)
 	}
@@ -31,17 +28,15 @@ func New(connString string) (*DB, error) {
 	return &DB{Pool: pool}, nil
 }
 
-// Close closes the database connection
 func (db *DB) Close() {
 	if db.Pool != nil {
 		db.Pool.Close()
 	}
 }
 
-// GetSensors retrieves all sensors from the database
 func (db *DB) GetSensors(ctx context.Context) ([]models.Sensor, error) {
 	query := `
-		SELECT id, name, type, location, value, unit, status, last_updated, created_at
+		SELECT id, room_id, name, type, manufacturer, model, serial_number, firmware_version, status, created_at, updated_at
 		FROM devices
 		ORDER BY id
 	`
@@ -57,14 +52,16 @@ func (db *DB) GetSensors(ctx context.Context) ([]models.Sensor, error) {
 		var s models.Sensor
 		err := rows.Scan(
 			&s.ID,
+			&s.RoomID,
 			&s.Name,
 			&s.Type,
-			&s.Location,
-			&s.Value,
-			&s.Unit,
+			&s.Manufacturer,
+			&s.Model,
+			&s.SerialNumber,
+			&s.FirmwareVersion,
 			&s.Status,
-			&s.LastUpdated,
 			&s.CreatedAt,
+			&s.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning sensor row: %w", err)
@@ -79,10 +76,9 @@ func (db *DB) GetSensors(ctx context.Context) ([]models.Sensor, error) {
 	return sensors, nil
 }
 
-// GetSensorByID retrieves a sensor by its ID
 func (db *DB) GetSensorByID(ctx context.Context, id int) (models.Sensor, error) {
 	query := `
-		SELECT id, name, type, location, value, unit, status, last_updated, created_at
+		SELECT id, room_id, name, type, manufacturer, model, serial_number, firmware_version, status, created_at, updated_at
 		FROM devices
 		WHERE id = $1
 	`
@@ -90,14 +86,16 @@ func (db *DB) GetSensorByID(ctx context.Context, id int) (models.Sensor, error) 
 	var s models.Sensor
 	err := db.Pool.QueryRow(ctx, query, id).Scan(
 		&s.ID,
+		&s.RoomID,
 		&s.Name,
 		&s.Type,
-		&s.Location,
-		&s.Value,
-		&s.Unit,
+		&s.Manufacturer,
+		&s.Model,
+		&s.SerialNumber,
+		&s.FirmwareVersion,
 		&s.Status,
-		&s.LastUpdated,
 		&s.CreatedAt,
+		&s.UpdatedAt,
 	)
 	if err != nil {
 		return models.Sensor{}, fmt.Errorf("error getting sensor by ID: %w", err)
@@ -106,32 +104,36 @@ func (db *DB) GetSensorByID(ctx context.Context, id int) (models.Sensor, error) 
 	return s, nil
 }
 
-// CreateSensor creates a new sensor in the database
 func (db *DB) CreateSensor(ctx context.Context, s models.SensorCreate) (models.Sensor, error) {
 	query := `
-		INSERT INTO devices (name, type, location, unit, status, last_updated, created_at)
-		VALUES ($1, $2, $3, $4, 'inactive', $5, $5)
-		RETURNING id, name, type, location, value, unit, status, last_updated, created_at
+		INSERT INTO devices (room_id, name, type, manufacturer, model, serial_number, firmware_version, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 'inactive', $8, $8)
+		RETURNING id, room_id, name, type, manufacturer, model, serial_number, firmware_version, status, created_at, updated_at
 	`
 
 	now := time.Now()
 	var sensor models.Sensor
 	err := db.Pool.QueryRow(ctx, query,
+		s.RoomID,
 		s.Name,
 		s.Type,
-		s.Location,
-		s.Unit,
+		s.Manufacturer,
+		s.Model,
+		s.SerialNumber,
+		s.FirmwareVersion,
 		now,
 	).Scan(
 		&sensor.ID,
+		&sensor.RoomID,
 		&sensor.Name,
 		&sensor.Type,
-		&sensor.Location,
-		&sensor.Value,
-		&sensor.Unit,
+		&sensor.Manufacturer,
+		&sensor.Model,
+		&sensor.SerialNumber,
+		&sensor.FirmwareVersion,
 		&sensor.Status,
-		&sensor.LastUpdated,
 		&sensor.CreatedAt,
+		&sensor.UpdatedAt,
 	)
 	if err != nil {
 		return models.Sensor{}, fmt.Errorf("error creating sensor: %w", err)
@@ -140,16 +142,13 @@ func (db *DB) CreateSensor(ctx context.Context, s models.SensorCreate) (models.S
 	return sensor, nil
 }
 
-// UpdateSensor updates an existing sensor
 func (db *DB) UpdateSensor(ctx context.Context, id int, s models.SensorUpdate) (models.Sensor, error) {
-	// First check if the sensor exists
 	_, err := db.GetSensorByID(ctx, id)
 	if err != nil {
 		return models.Sensor{}, err
 	}
 
-	// Build the update query dynamically based on which fields are provided
-	query := "UPDATE devices SET last_updated = $1"
+	query := "UPDATE devices SET updated_at = $1"
 	args := []interface{}{time.Now()}
 	argCount := 2
 
@@ -165,21 +164,27 @@ func (db *DB) UpdateSensor(ctx context.Context, id int, s models.SensorUpdate) (
 		argCount++
 	}
 
-	if s.Location != "" {
-		query += fmt.Sprintf(", location = $%d", argCount)
-		args = append(args, s.Location)
+	if s.Manufacturer != "" {
+		query += fmt.Sprintf(", manufacturer = $%d", argCount)
+		args = append(args, s.Manufacturer)
 		argCount++
 	}
 
-	if s.Value != nil {
-		query += fmt.Sprintf(", value = $%d", argCount)
-		args = append(args, *s.Value)
+	if s.Model != "" {
+		query += fmt.Sprintf(", model = $%d", argCount)
+		args = append(args, s.Model)
 		argCount++
 	}
 
-	if s.Unit != "" {
-		query += fmt.Sprintf(", unit = $%d", argCount)
-		args = append(args, s.Unit)
+	if s.SerialNumber != "" {
+		query += fmt.Sprintf(", serial_number = $%d", argCount)
+		args = append(args, s.SerialNumber)
+		argCount++
+	}
+
+	if s.FirmwareVersion != "" {
+		query += fmt.Sprintf(", firmware_version = $%d", argCount)
+		args = append(args, s.FirmwareVersion)
 		argCount++
 	}
 
@@ -189,22 +194,23 @@ func (db *DB) UpdateSensor(ctx context.Context, id int, s models.SensorUpdate) (
 		argCount++
 	}
 
-	// Add the WHERE clause and RETURNING clause
 	query += ` WHERE id = $` + fmt.Sprintf("%d", argCount) + `
-		RETURNING id, name, type, location, value, unit, status, last_updated, created_at`
+		RETURNING id, room_id, name, type, manufacturer, model, serial_number, firmware_version, status, created_at, updated_at`
 	args = append(args, id)
 
 	var sensor models.Sensor
 	err = db.Pool.QueryRow(ctx, query, args...).Scan(
 		&sensor.ID,
+		&sensor.RoomID,
 		&sensor.Name,
 		&sensor.Type,
-		&sensor.Location,
-		&sensor.Value,
-		&sensor.Unit,
+		&sensor.Manufacturer,
+		&sensor.Model,
+		&sensor.SerialNumber,
+		&sensor.FirmwareVersion,
 		&sensor.Status,
-		&sensor.LastUpdated,
 		&sensor.CreatedAt,
+		&sensor.UpdatedAt,
 	)
 	if err != nil {
 		return models.Sensor{}, fmt.Errorf("error updating sensor: %w", err)
@@ -213,10 +219,19 @@ func (db *DB) UpdateSensor(ctx context.Context, id int, s models.SensorUpdate) (
 	return sensor, nil
 }
 
-// DeleteSensor deletes a sensor by its ID
 func (db *DB) DeleteSensor(ctx context.Context, id int) error {
-	query := "DELETE FROM devices WHERE id = $1"
-	result, err := db.Pool.Exec(ctx, query, id)
+	tx, err := db.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, "DELETE FROM telemetry WHERE device_id = $1", id)
+	if err != nil {
+		return fmt.Errorf("error deleting telemetry data: %w", err)
+	}
+
+	result, err := tx.Exec(ctx, "DELETE FROM devices WHERE id = $1", id)
 	if err != nil {
 		return fmt.Errorf("error deleting sensor: %w", err)
 	}
@@ -225,24 +240,41 @@ func (db *DB) DeleteSensor(ctx context.Context, id int) error {
 		return errors.New("sensor not found")
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
 	return nil
 }
 
-// UpdateSensorValue updates the value and status of a sensor
 func (db *DB) UpdateSensorValue(ctx context.Context, id int, value float64, status string) error {
-	query := `
-		UPDATE devices
-		SET value = $1, status = $2, last_updated = $3
-		WHERE id = $4
-	`
-
-	result, err := db.Pool.Exec(ctx, query, value, status, time.Now(), id)
+	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("error updating sensor value: %w", err)
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	updateDevice := `UPDATE devices SET status = $1, updated_at = $2 WHERE id = $3`
+	result, err := tx.Exec(ctx, updateDevice, status, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("error updating sensor status: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
 		return errors.New("sensor not found")
+	}
+
+	insertTelemetry := `
+		INSERT INTO telemetry (device_id, value, unit, timestamp)
+		VALUES ($1, $2, 'celsius', $3)
+	`
+	_, err = tx.Exec(ctx, insertTelemetry, id, value, time.Now())
+	if err != nil {
+		return fmt.Errorf("error inserting telemetry: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("error committing transaction: %w", err)
 	}
 
 	return nil

@@ -1,7 +1,13 @@
+# NOTE: This API spec describes a planned Notification Service that is NOT YET IMPLEMENTED
+# The notification service is part of the target architecture but has not been built.
+
 openapi: 3.0.3
 info:
-  title: Notification Service API
-  description: API для управления уведомлениями и шаблонами оповещений
+  title: Notification Service API (Planned)
+  description: |
+    API для управления уведомлениями и шаблонами оповещений.
+    
+    **СТАТУС: Запланирован, не реализован.**
   version: 1.0.0
   contact:
     name: Smart Home Team

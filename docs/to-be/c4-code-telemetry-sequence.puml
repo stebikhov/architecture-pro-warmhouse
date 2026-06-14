@@ -1,24 +1,22 @@
-@startuml
+@startuml Сервис телеметрии
 title Сервис телеметрии - Диаграмма классов
-
-' --- DTO и Entity классы ---
 
 class Telemetry {
     +ID: int
-    +SensorID: int
+    +DeviceID: int
     +Value: float64
     +Unit: string
     +Timestamp: time.Time
 }
 
 class TelemetryCreate {
-    +SensorID: int
+    +DeviceID: int
     +Value: float64
     +Unit?: string
 }
 
 class TelemetryStats {
-    +SensorID: int
+    +DeviceID: int
     +Count: int
     +Min: float64
     +Max: float64
@@ -32,53 +30,44 @@ class DeviceWebhook {
     +Timestamp: string
 }
 
-' --- Слой приложения ---
-
 class TelemetryHandler {
-    +GetTelemetry(sensorId: int): List<Telemetry>
-    +GetHistory(sensorId: int, from: time.Time, to: time.Time): List<Telemetry>
+    +GetTelemetry(deviceId: int): List<Telemetry>
+    +GetHistory(deviceId: int, from: time.Time, to: time.Time): List<Telemetry>
     +ReceiveTelemetry(data: TelemetryCreate): Telemetry
-    +GetStats(sensorId: int): TelemetryStats
+    +GetStats(deviceId: int): TelemetryStats
     +HandleDeviceWebhook(webhook: DeviceWebhook): void
-    +HandleWebSocket(sensorId: int): void
+    +HandleWebSocket(deviceId: int): void
 }
 
 class TelemetryService {
-    +GetTelemetry(sensorID: int, limit: int): List<Telemetry>
-    +GetHistory(sensorID: int, from: time.Time, to: time.Time): List<Telemetry>
+    +GetTelemetry(deviceID: int, limit: int): List<Telemetry>
+    +GetHistory(deviceID: int, from: time.Time, to: time.Time): List<Telemetry>
     +ReceiveTelemetry(data: TelemetryCreate): Telemetry
-    +GetStats(sensorID: int): TelemetryStats
+    +GetStats(deviceID: int): TelemetryStats
     +ProcessDeviceWebhook(webhook: DeviceWebhook): void
     +GetTemperature(location: string): float64
     -checkThreshold(telemetry: Telemetry): bool
 }
 
 class TelemetryRepository {
-    +GetBySensorID(sensorID: int, limit: int): List<Telemetry>
-    +GetHistory(sensorID: int, from: time.Time, to: time.Time): List<Telemetry>
+    +GetByDeviceID(deviceID: int, limit: int): List<Telemetry>
+    +GetHistory(deviceID: int, from: time.Time, to: time.Time): List<Telemetry>
     +Create(data: TelemetryCreate): Telemetry
-    +GetStats(sensorID: int): TelemetryStats
+    +GetStats(deviceID: int): TelemetryStats
 }
 
-' --- Связи ---
-
-' Зависимости (использует)
 TelemetryHandler ..> TelemetryService : использует
 TelemetryService ..> TelemetryRepository : использует
 
-' Преобразование данных (DTO)
 TelemetryHandler ..> TelemetryCreate : разбирает из JSON
 TelemetryHandler ..> DeviceWebhook : разбирает из JSON
 
-' Возврат данных
 TelemetryService --> Telemetry : возвращает
 TelemetryService --> TelemetryStats : возвращает
 
-' Маппинг данных (Repository <-> DB / Entity)
 TelemetryRepository --> Telemetry : маппит в/из
 TelemetryRepository --> TelemetryStats : маппит в
 
-' Принятие данных для обработки
 TelemetryService ..> TelemetryCreate : принимает
 
 note right of TelemetryService
@@ -87,8 +76,6 @@ note right of TelemetryService
   Брокер сообщений не используется — прямые HTTP-вызовы.
 end note
 
-' Примечание про БД (в диаграмме классов обычно не рисуют саму БД как класс,
-' но можно добавить заметку или стереотип, если критично)
 note bottom of TelemetryRepository
   Доступ к данным через pgxpool
   Сохранение в PostgreSQL (таблица telemetry)

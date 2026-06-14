@@ -1,30 +1,78 @@
-@startuml
-title API Температуры — Диаграмма классов
+@startuml  Smart Home API
+title Smart Home API — Диаграмма классов
+
+enum SensorType {
+    temperature
+}
 
 class TemperatureResponse {
-    +sensor_id: str
-    +location: str
-    +value: float
-    +unit: str
-    +status: str
-    +timestamp: str
+    +Value: float64
+    +Unit: string
+    +Timestamp: time.Time
+    +Location: string
+    +Status: string
+    +SensorID: string
+    +SensorType: string
+    +Description: string
 }
 
-class SensorMapping {
-    -sensor_to_location: dict[int, str]
-    -location_to_sensor: dict[str, int]
-    +get_location(sensor_id: int): str
-    +get_sensor_id(location: str): int
+class TemperatureService {
+    +BaseURL: string
+    +HTTPClient: *http.Client
+    +GetTemperature(location: string): *TemperatureResponse
+    +GetTemperatureByID(sensorID: string): *TemperatureResponse
 }
 
-class FastAPIApp {
-    +get_temperature(location: str, sensor_id: int): TemperatureResponse
-    +get_temperature_by_id(sensor_id: int): TemperatureResponse
-    +health_check(): dict
-    -generate_random_value(): float
+class Sensor {
+    +ID: int
+    +RoomID: *int
+    +Name: string
+    +Type: SensorType
+    +Manufacturer: string
+    +Model: string
+    +SerialNumber: string
+    +FirmwareVersion: string
+    +Status: string
+    +CreatedAt: time.Time
+    +UpdatedAt: time.Time
 }
 
-FastAPIApp ..> SensorMapping
-FastAPIApp --> TemperatureResponse
+class SensorCreate {
+    +RoomID: *int
+    +Name: string
+    +Type: SensorType
+    +Manufacturer: string
+    +Model: string
+    +SerialNumber: string
+    +FirmwareVersion: string
+}
+
+class SensorUpdate {
+    +Name: string
+    +Type: SensorType
+    +Manufacturer: string
+    +Model: string
+    +SerialNumber: string
+    +FirmwareVersion: string
+    +Status: string
+}
+
+class SensorHandler {
+    +DB: *db.DB
+    +TemperatureService: *TemperatureService
+    +RegisterRoutes(router: *gin.RouterGroup)
+    +GetSensors()
+    +GetSensorByID(id: int)
+    +CreateSensor(data: SensorCreate)
+    +UpdateSensor(id: int, data: SensorUpdate)
+    +DeleteSensor(id: int)
+    +UpdateSensorValue(id: int, value: float64, status: string)
+    +GetTemperatureByLocation(location: string)
+}
+
+TemperatureService --> TemperatureResponse : возвращает
+SensorHandler --> TemperatureService : использует
+SensorHandler ..> SensorCreate : разбирает из JSON
+SensorHandler ..> SensorUpdate : разбирает из JSON
 
 @enduml

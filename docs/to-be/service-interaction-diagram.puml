@@ -10,20 +10,22 @@ skinparam ranksep 40
 ' --- Участники (в порядке круга) ---
 component "Person/System" as Person
 component "smart_home\n(Go + Gin : 8080)" as SmartHome
-component "temperature-api\n(Python + FastAPI : 8081)" as TempAPI
 component "telemetry-service\n(Go + Gin : 8083)" as Telemetry
 component "device-management\n(Go + Gin : 8082)" as DeviceMgmt
-database "PostgreSQL\n:5432" as DB
+database "smart_home_db" as SHDB
+database "telemetry_db" as TDB
+database "device_db" as DDB
 
-' --- Скрытые связи для круга (ТОЛЬКО [hidden], без dotted!) ---
+' --- Скрытые связи для круга ---
 Person -[hidden]- SmartHome
-SmartHome -[hidden]- TempAPI
-TempAPI -[hidden]- Telemetry
+SmartHome -[hidden]- Telemetry
 Telemetry -[hidden]- DeviceMgmt
-DeviceMgmt -[hidden]- DB
-DB -[hidden]- Person
+DeviceMgmt -[hidden]- DDB
+DDB -[hidden]- TDB
+TDB -[hidden]- SHDB
+SHDB -[hidden]- Person
 
-' --- Реальные взаимодействия (Цветные стрелки) ---
+' --- Реальные взаимодействия ---
 
 ' Клиентские запросы (Синий: HTTP/REST)
 Person -[#007ACC]> SmartHome : HTTP/REST\nCRUD операции
@@ -31,19 +33,15 @@ Person -[#007ACC]> DeviceMgmt : HTTP/REST\nУправление устройст
 Person -[#007ACC]> Telemetry : HTTP/REST + WS\nТелеметрия realtime
 
 ' SmartHome взаимодействия
-SmartHome -[#FF5733]> DB : TCP/5432\nSQL CRUD
-SmartHome -[#007ACC]> TempAPI : HTTP/REST\nGET /temperature
-SmartHome -[#007ACC]> DeviceMgmt : HTTP/REST\n/api/v1/devices
-SmartHome -[#007ACC]> Telemetry : HTTP/REST\nGET /api/v1/telemetry
+SmartHome -[#FF5733]> SHDB : TCP/5432\nSQL CRUD
 
 ' Device Management взаимодействия
-DeviceMgmt -[#FF5733]> DB : TCP/5432\nSQL CRUD
-DeviceMgmt -[#FFC300]> SmartHome : HTTP Webhook\nPOST /webhooks/device.*
+DeviceMgmt -[#FF5733]> DDB : TCP/5432\nSQL CRUD
+DeviceMgmt -[#FFC300]> Telemetry : HTTP Webhook\nPOST /webhooks/device.*
 
 ' Telemetry взаимодействия
-Telemetry -[#FF5733]> DB : TCP/5432\nSQL CRUD
-Telemetry -[#007ACC]> TempAPI : HTTP/REST\nGET /temperature
-Telemetry -[#FFC300]> SmartHome : HTTP Webhook\nPOST /webhooks/telemetry.*
+Telemetry -[#FF5733]> TDB : TCP/5432\nSQL CRUD
+Telemetry -[#FFC300]> DeviceMgmt : HTTP Webhook\nPOST /webhooks/telemetry.*
 
 legend right
   <b>Тип взаимодействия (цвет стрелки)</b>

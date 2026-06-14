@@ -1,29 +1,46 @@
-@startuml
+@startuml Device Management Service
 title Device Management Service - Class Diagram
 
-' Перечисления
+enum DeviceType {
+    sensor
+    lamp
+    lock
+    thermostat
+    camera
+    switch
+    outlet
+    valve
+    other
+}
+
 enum DeviceStatus {
     active
     inactive
     offline
 }
 
-' DTO для запросов
 class DeviceCreate {
+    +RoomID: *int
     +Name: string
-    +Type: string
-    +Location: string
-    +Status?: DeviceStatus
+    +Type: DeviceType
+    +Manufacturer: string
+    +Model: string
+    +SerialNumber: string
+    +FirmwareVersion: string
+    +Status: DeviceStatus
 }
 
 class DeviceUpdate {
+    +RoomID: *int
     +Name?: string
-    +Type?: string
-    +Location?: string
+    +Type?: DeviceType
+    +Manufacturer: string
+    +Model: string
+    +SerialNumber: string
+    +FirmwareVersion: string
     +Status?: DeviceStatus
 }
 
-' Внутренние DTO
 class WebhookPayload {
     +Event: string
     +DeviceID: int
@@ -31,18 +48,20 @@ class WebhookPayload {
     +Timestamp: string
 }
 
-' Основная сущность
 class Device {
     +ID: int
+    +RoomID: *int
     +Name: string
-    +Type: string
-    +Location: string
+    +Type: DeviceType
+    +Manufacturer: string
+    +Model: string
+    +SerialNumber: string
+    +FirmwareVersion: string
     +Status: DeviceStatus
-    +LastUpdated: time.Time
     +CreatedAt: time.Time
+    +UpdatedAt: time.Time
 }
 
-' Слой репозитория
 class DeviceRepository {
     +GetAll(): List<Device>
     +GetByID(id): Device
@@ -51,7 +70,6 @@ class DeviceRepository {
     +Delete(id): bool
 }
 
-' Сервисный слой
 class DeviceService {
     +GetAllDevices(): List<Device>
     +GetDeviceByID(id): Device
@@ -62,7 +80,6 @@ class DeviceService {
     -sendWebhook(event, device): void
 }
 
-' Контроллер (Handler)
 class DeviceHandler {
     +GetDevices()
     +GetDeviceByID(id)
@@ -72,8 +89,7 @@ class DeviceHandler {
     +GetDeviceStatus(id)
 }
 
-' Связи
-Device "1" -- "0..*" DeviceStatus : has >
+Device "1" -- "0..*" DeviceStatus : has
 DeviceRepository --> Device : maps to/from
 DeviceService --> DeviceRepository : uses
 DeviceHandler --> DeviceService : uses
