@@ -4,10 +4,36 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: smarthome-postgres
-  ## тут нужно добавить настройки
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: smarthome
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./smart_home/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - smarthome-network
 
   temperature-api:
-  ## тут нужно добавить приложение
+    build:
+      context: ./temperature-api
+      dockerfile: Dockerfile
+    container_name: smarthome-temperature-api
+    environment:
+      - PORT=:8081
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+    networks:
+      - smarthome-network
 
   app:
     build:
@@ -24,6 +50,65 @@ services:
       - TEMPERATURE_API_URL=http://temperature-api:8081
     ports:
       - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - smarthome-network
+
+  device-management:
+    build:
+      context: ./device-management
+      dockerfile: Dockerfile
+    container_name: smarthome-device-mgmt
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
+      - TELEMETRY_WEBHOOK_URL=http://telemetry-service:8080/webhooks/device
+      - PORT=:8080
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - smarthome-network
+
+  telemetry-service:
+    build:
+      context: ./telemetry-service
+      dockerfile: Dockerfile
+    container_name: smarthome-telemetry
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
+      - DEVICE_MGMT_URL=http://device-management:8080
+      - TEMPERATURE_API_URL=http://temperature-api:8081
+      - PORT=:8080
+      - THRESHOLD_MIN=0.0
+      - THRESHOLD_MAX=40.0
+    ports:
+      - "8083:8080"
+    depends_on:
+      device-management:
+        condition: service_healthy
+      temperature-api:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - smarthome-network
+
+  swagger-ui:
+    image: nginx:alpine
+    container_name: smarthome-swagger-ui
+    ports:
+      - "8084:80"
+    volumes:
+      - ../docs/to-be/api:/usr/share/nginx/html/api:ro
+      - ./docs/to-be/swagger-ui/index.html:/usr/share/nginx/html/index.html:ro
+      - ./docs/to-be/swagger-ui/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
     networks:
       - smarthome-network

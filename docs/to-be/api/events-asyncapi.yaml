@@ -1,0 +1,175 @@
+asyncapi: 2.6.0
+info:
+  title: Smart Home Events
+  version: 1.0.0
+  description: |
+    События между микросервисами Smart Home системы.
+    Реализация использует HTTP webhooks для межсервисного взаимодействия.
+  contact:
+    name: Smart Home Team
+servers:
+  development:
+    url: localhost:8080
+    protocol: http
+    description: Локальный сервер
+  production:
+    url: events.smart-home.local:8080
+    protocol: http
+    description: Продакшен сервер
+defaultContentType: application/json
+tags:
+  - name: device
+    description: События, связанные с устройствами
+  - name: telemetry
+    description: События телеметрии
+channels:
+  webhooks/device:
+    description: Webhook для получения событий об устройствах от device-management сервиса
+    subscribe:
+      summary: Получение события об устройстве
+      operationId: onDeviceEvent
+      tags:
+        - name: device
+      message:
+        $ref: "#/components/messages/DeviceWebhook"
+    publish:
+      summary: Публикация события об устройстве
+      operationId: publishDeviceEvent
+      tags:
+        - name: device
+      message:
+        $ref: "#/components/messages/DeviceWebhook"
+  webhooks/telemetry:
+    description: Webhook для получения событий телеметрии от telemetry-service
+    subscribe:
+      summary: Получение события телеметрии
+      operationId: onTelemetryEvent
+      tags:
+        - name: telemetry
+      message:
+        $ref: "#/components/messages/ThresholdExceededWebhook"
+    publish:
+      summary: Публикация события телеметрии
+      operationId: publishTelemetryEvent
+      tags:
+        - name: telemetry
+      message:
+        $ref: "#/components/messages/ThresholdExceededWebhook"
+components:
+  messages:
+    DeviceWebhook:
+      name: DeviceWebhook
+      title: Событие устройства
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - device_id
+          - device
+          - timestamp
+        properties:
+          event:
+            type: string
+            enum:
+              - device.created
+              - device.updated
+              - device.deleted
+            description: Тип события
+          device_id:
+            type: integer
+            description: ID устройства
+          device:
+            type: object
+            required:
+              - id
+              - name
+              - type
+              - status
+              - created_at
+              - updated_at
+            properties:
+              id:
+                type: integer
+              room_id:
+                type: integer
+                nullable: true
+              name:
+                type: string
+              type:
+                type: string
+                enum:
+                  - sensor
+                  - lamp
+                  - lock
+                  - thermostat
+                  - camera
+                  - switch
+                  - outlet
+                  - valve
+                  - other
+              manufacturer:
+                type: string
+              model:
+                type: string
+              serial_number:
+                type: string
+              firmware_version:
+                type: string
+              status:
+                type: string
+                enum:
+                  - active
+                  - inactive
+                  - offline
+              created_at:
+                type: string
+                format: date-time
+              updated_at:
+                type: string
+                format: date-time
+          timestamp:
+            type: string
+            format: date-time
+            description: Время события в формате RFC3339
+    ThresholdExceededWebhook:
+      name: ThresholdExceededWebhook
+      title: Превышение порога телеметрии
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - telemetry
+          - timestamp
+        properties:
+          event:
+            type: string
+            enum:
+              - threshold.exceeded
+            description: Тип события
+          telemetry:
+            type: object
+            required:
+              - id
+              - device_id
+              - value
+              - unit
+              - timestamp
+            properties:
+              id:
+                type: integer
+              device_id:
+                type: integer
+              value:
+                type: number
+                format: float
+              unit:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+          timestamp:
+            type: string
+            format: date-time
+            description: Время события в формате RFC3339

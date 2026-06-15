@@ -1,0 +1,294 @@
+openapi: 3.0.3
+info:
+  title: Device Management Service API
+  description: API для управления устройствами (датчиками) в системе умного дома
+  version: 1.0.0
+  contact:
+    name: Smart Home Team
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Локальный сервер разработки
+tags:
+  - name: devices
+    description: Операции с устройствами
+paths:
+  /devices:
+    get:
+      tags:
+        - devices
+      summary: Получить список всех устройств
+      description: Возвращает список всех датчиков с их текущими параметрами
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - sensor
+              - lamp
+              - lock
+              - thermostat
+              - camera
+              - switch
+              - outlet
+              - valve
+              - other
+          description: Фильтр по типу устройства
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - active
+              - inactive
+              - offline
+          description: Фильтр по статусу
+      responses:
+        '200':
+          description: Список устройств получен успешно
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        '500':
+          description: Внутренняя ошибка сервера
+    post:
+      tags:
+        - devices
+      summary: Создать новое устройство
+      description: Создаёт новый датчик в системе
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCreate'
+      responses:
+        '201':
+          description: Устройство создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          description: Некорректные данные запроса
+        '409':
+          description: Устройство с таким именем уже существует
+  /devices/{id}:
+    get:
+      tags:
+        - devices
+      summary: Получить устройство по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Устройство найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '404':
+          description: Устройство не найдено
+    put:
+      tags:
+        - devices
+      summary: Обновить устройство
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceUpdate'
+      responses:
+        '200':
+          description: Устройство обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          description: Некорректные данные
+        '404':
+          description: Устройство не найдено
+    delete:
+      tags:
+        - devices
+      summary: Удалить устройство
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Устройство удалено
+        '404':
+          description: Устройство не найдено
+  /devices/{id}/status:
+    get:
+      tags:
+        - devices
+      summary: Получить статус устройства
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Статус получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceStatus'
+        '404':
+          description: Устройство не найдено
+components:
+  schemas:
+    Device:
+      type: object
+      properties:
+        id:
+          type: integer
+        room_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - sensor
+            - lamp
+            - lock
+            - thermostat
+            - camera
+            - switch
+            - outlet
+            - valve
+            - other
+        manufacturer:
+          type: string
+        model:
+          type: string
+        serial_number:
+          type: string
+        firmware_version:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - offline
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    DeviceCreate:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        room_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - sensor
+            - lamp
+            - lock
+            - thermostat
+            - camera
+            - switch
+            - outlet
+            - valve
+            - other
+        manufacturer:
+          type: string
+        model:
+          type: string
+        serial_number:
+          type: string
+        firmware_version:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - offline
+    DeviceUpdate:
+      type: object
+      properties:
+        room_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - sensor
+            - lamp
+            - lock
+            - thermostat
+            - camera
+            - switch
+            - outlet
+            - valve
+            - other
+        manufacturer:
+          type: string
+        model:
+          type: string
+        serial_number:
+          type: string
+        firmware_version:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - offline
+    DeviceStatus:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - offline
+        lastSeen:
+          type: string
+          format: date-time
+        batteryLevel:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100

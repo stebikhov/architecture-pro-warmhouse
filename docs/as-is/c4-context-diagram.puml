@@ -1,0 +1,26 @@
+@startuml diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Smart Home System - Context Diagram (C4 Level 1)
+
+Person(user, "Пользователь", "Владелец умного дома, управляющий устройствами и просматривающий данные датчиков")
+Person(admin, "Администратор", "Технический специалист, настраивающий систему и управляющий устройствами")
+
+System_Boundary(smart_home, "Smart Home System") {
+    Container(smart_home_app, "Smart Home Monolith", "Go + Gin + PostgreSQL", "Управление датчиками, сбор телеметрии, интеграция с внешними API")
+}
+
+System_Ext(temperature_api, "Temperature API", "Внешний сервис", "Предоставляет данные о температуре в реальном времени")
+System_Ext(postgres, "PostgreSQL", "База данных", "Хранение данных о датчиках и их показаниях")
+
+Rel(user, smart_home_app, "Использует", "HTTP/REST", "GET /api/v1/sensors, POST /api/v1/sensors, PUT /api/v1/sensors/:id, DELETE /api/v1/sensors/:id, PATCH /api/v1/sensors/:id/value")
+Rel(admin, smart_home_app, "Настраивает", "HTTP/REST", "Управление устройствами, мониторинг состояния")
+Rel(smart_home_app, temperature_api, "Запрашивает данные о температуре", "HTTP/REST", "GET /temperature?location=, GET /temperature/:id")
+Rel(smart_home_app, postgres, "Чтение/запись данных", "PostgreSQL Protocol", "Хранение конфигурации датчиков, история показаний")
+
+Rel(user, temperature_api, "Косвенно получает данные", "Через Smart Home App")
+
+
+@enduml

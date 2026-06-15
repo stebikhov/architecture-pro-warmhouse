@@ -1,0 +1,351 @@
+openapi: 3.0.3
+info:
+  title: Temperature Monitoring Service API
+  description: API для мониторинга температуры, интеграции с внешними API и кэширования данных
+  version: 1.0.0
+  contact:
+    name: Smart Home Team
+servers:
+  - url: http://localhost:8081/api/v1
+    description: Локальный сервер разработки
+tags:
+  - name: temperature
+    description: Операции с данными о температуре
+  - name: alerts
+    description: Температурные алерты
+paths:
+  /temperature/{location}:
+    get:
+      tags:
+        - temperature
+      summary: Получить температуру по локации
+      description: Возвращает текущие данные о температуре для указанной локации
+      parameters:
+        - name: location
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Название локации (например, "Living Room", "Kitchen")
+        - name: useCache
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Использовать кэшированные данные (если false - запрос к внешнему API)
+      responses:
+        '200':
+          description: Данные о температуре получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemperatureData'
+        '404':
+          description: Локация не найдена
+        '502':
+          description: Ошибка внешнего Temperature API
+  /temperature/sensor/{sensorId}:
+    get:
+      tags:
+        - temperature
+      summary: Получить температуру по ID сенсора
+      parameters:
+        - name: sensorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Данные получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemperatureData'
+        '404':
+          description: Сенсор не найден
+  /temperature/history/{location}:
+    get:
+      tags:
+        - temperature
+      summary: Получить историю температур
+      parameters:
+        - name: location
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: granularity
+          in: query
+          schema:
+            type: string
+            enum:
+              - minute
+              - hour
+              - day
+          description: Гранулярность данных
+      responses:
+        '200':
+          description: История получена
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TemperatureHistory'
+  /temperature/cache/refresh:
+    post:
+      tags:
+        - temperature
+      summary: Принудительное обновление кэша
+      description: Запускает немедленное обновление кэша температур из внешнего API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                locations:
+                  type: array
+                  items:
+                    type: string
+                  description: Список локаций для обновления (если пусто - все)
+      responses:
+        '202':
+          description: Обновление запущено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshStatus'
+  /temperature/alerts:
+    get:
+      tags:
+        - alerts
+      summary: Получить температурные алерты
+      description: Возвращает активные алерты о превышении температурных порогов
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - active
+              - resolved
+              - all
+          description: Фильтр по статусу алертов
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum:
+              - low
+              - medium
+              - high
+              - critical
+          description: Фильтр по уровню критичности
+      responses:
+        '200':
+          description: Список алертов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TemperatureAlert'
+  /temperature/alerts/thresholds:
+    get:
+      tags:
+        - alerts
+      summary: Получить настроенные пороги
+      responses:
+        '200':
+          description: Пороги получены
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertThreshold'
+    post:
+      tags:
+        - alerts
+      summary: Создать порог для алерта
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertThresholdCreate'
+      responses:
+        '201':
+          description: Порог создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertThreshold'
+components:
+  schemas:
+    TemperatureData:
+      type: object
+      properties:
+        location:
+          type: string
+        sensorId:
+          type: string
+        value:
+          type: number
+          format: float
+        unit:
+          type: string
+          enum:
+            - celsius
+            - fahrenheit
+        status:
+          type: string
+          enum:
+            - normal
+            - warning
+            - critical
+        description:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        source:
+          type: string
+          enum:
+            - cache
+            - live
+          description: Источник данных (кэш или прямой запрос)
+    TemperatureHistory:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        value:
+          type: number
+          format: float
+        location:
+          type: string
+        sensorId:
+          type: string
+    TemperatureAlert:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        location:
+          type: string
+        sensorId:
+          type: string
+        currentValue:
+          type: number
+          format: float
+        thresholdValue:
+          type: number
+          format: float
+        thresholdType:
+          type: string
+          enum:
+            - min
+            - max
+        severity:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+        status:
+          type: string
+          enum:
+            - active
+            - resolved
+        triggeredAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+    AlertThreshold:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        location:
+          type: string
+          nullable: true
+        sensorType:
+          type: string
+        minThreshold:
+          type: number
+          format: float
+          nullable: true
+        maxThreshold:
+          type: number
+          format: float
+          nullable: true
+        severity:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+        enabled:
+          type: boolean
+          default: true
+    AlertThresholdCreate:
+      type: object
+      required:
+        - sensorType
+        - severity
+      properties:
+        location:
+          type: string
+        sensorType:
+          type: string
+        minThreshold:
+          type: number
+          format: float
+        maxThreshold:
+          type: number
+          format: float
+        severity:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+    RefreshStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - started
+            - completed
+            - failed
+        locationsRequested:
+          type: integer
+        jobId:
+          type: string
+          format: uuid

@@ -1,0 +1,39 @@
+﻿@startuml diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+
+title Smart Home System - Container Diagram (C4 Level 2) - To-Be Architecture
+
+Person(user, "Пользователь", "Владелец умного дома")
+Person(admin, "Администратор", "Технический специалист")
+
+System_Boundary(smart_home, "Smart Home Ecosystem") {
+    Container(spa, "SPA", "React", "Веб-интерфейс для управления устройствами и просмотра телеметрии")
+    
+    Container(smart_home_api, "Smart Home API", "Go + Gin : 8080", "Управление сенсорами, интеграция с внешним Temperature API")
+    Container(device_mgmt, "Device Management Service", "Go + Gin : 8082", "Управление жизненным циклом устройств, CRUD операции")
+    Container(telemetry_svc, "Telemetry Service", "Go + Gin : 8083", "Сбор, обработка и хранение показаний датчиков")
+    
+    ContainerDb(smart_home_db, "Smart Home DB", "PostgreSQL", "Хранение данных сенсоров и температурных показаний")
+    ContainerDb(device_db, "Device DB", "PostgreSQL", "Хранение конфигурации устройств и их метаданных")
+    ContainerDb(telemetry_db, "Telemetry DB", "TimescaleDB", "Временные ряды показаний датчиков")
+}
+
+System_Ext(external_temp_api, "External Temperature API", "Внешний сервис", "Данные о температуре в реальном времени")
+
+Rel(user, spa, "Управляет устройствами", "HTTPS")
+Rel(admin, spa, "Настраивает систему", "HTTPS")
+Rel(spa, smart_home_api, "CRUD сенсоров + температура", "REST API")
+Rel(spa, device_mgmt, "CRUD устройств", "REST API")
+Rel(spa, telemetry_svc, "Получает телеметрию", "REST API")
+
+Rel(smart_home_api, smart_home_db, "Чтение/запись", "PostgreSQL Protocol")
+Rel(device_mgmt, device_db, "Чтение/запись", "PostgreSQL Protocol")
+Rel(telemetry_svc, telemetry_db, "Чтение/запись", "PostgreSQL Protocol")
+
+Rel(smart_home_api, external_temp_api, "Запрашивает данные", "HTTP/REST")
+
+Rel(device_mgmt, telemetry_svc, "Webhook: device.created/updated/deleted", "HTTP POST")
+Rel(telemetry_svc, device_mgmt, "Webhook: threshold.exceeded", "HTTP POST")
+
+@enduml

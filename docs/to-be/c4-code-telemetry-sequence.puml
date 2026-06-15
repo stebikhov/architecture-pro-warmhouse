@@ -1,0 +1,83 @@
+@startuml Сервис телеметрии
+title Сервис телеметрии - Диаграмма классов
+
+class Telemetry {
+    +ID: int
+    +DeviceID: int
+    +Value: float64
+    +Unit: string
+    +Timestamp: time.Time
+}
+
+class TelemetryCreate {
+    +DeviceID: int
+    +Value: float64
+    +Unit?: string
+}
+
+class TelemetryStats {
+    +DeviceID: int
+    +Count: int
+    +Min: float64
+    +Max: float64
+    +Avg: float64
+    +Unit: string
+}
+
+class DeviceWebhook {
+    +Event: string
+    +DeviceID: int
+    +Timestamp: string
+}
+
+class TelemetryHandler {
+    +GetTelemetry(deviceId: int): List<Telemetry>
+    +GetHistory(deviceId: int, from: time.Time, to: time.Time): List<Telemetry>
+    +ReceiveTelemetry(data: TelemetryCreate): Telemetry
+    +GetStats(deviceId: int): TelemetryStats
+    +HandleDeviceWebhook(webhook: DeviceWebhook): void
+    +HandleWebSocket(deviceId: int): void
+}
+
+class TelemetryService {
+    +GetTelemetry(deviceID: int, limit: int): List<Telemetry>
+    +GetHistory(deviceID: int, from: time.Time, to: time.Time): List<Telemetry>
+    +ReceiveTelemetry(data: TelemetryCreate): Telemetry
+    +GetStats(deviceID: int): TelemetryStats
+    +ProcessDeviceWebhook(webhook: DeviceWebhook): void
+    +GetTemperature(location: string): float64
+    -checkThreshold(telemetry: Telemetry): bool
+}
+
+class TelemetryRepository {
+    +GetByDeviceID(deviceID: int, limit: int): List<Telemetry>
+    +GetHistory(deviceID: int, from: time.Time, to: time.Time): List<Telemetry>
+    +Create(data: TelemetryCreate): Telemetry
+    +GetStats(deviceID: int): TelemetryStats
+}
+
+TelemetryHandler ..> TelemetryService : использует
+TelemetryService ..> TelemetryRepository : использует
+
+TelemetryHandler ..> TelemetryCreate : разбирает из JSON
+TelemetryHandler ..> DeviceWebhook : разбирает из JSON
+
+TelemetryService --> Telemetry : возвращает
+TelemetryService --> TelemetryStats : возвращает
+
+TelemetryRepository --> Telemetry : маппит в/из
+TelemetryRepository --> TelemetryStats : маппит в
+
+TelemetryService ..> TelemetryCreate : принимает
+
+note right of TelemetryService
+  Оповещения о порогах: при значении > 40 или < 0
+  отправляется POST-запрос webhook в сервис управления устройствами.
+  Брокер сообщений не используется — прямые HTTP-вызовы.
+end note
+
+note bottom of TelemetryRepository
+  Доступ к данным через pgxpool
+  Сохранение в PostgreSQL (таблица telemetry)
+end note
+@enduml

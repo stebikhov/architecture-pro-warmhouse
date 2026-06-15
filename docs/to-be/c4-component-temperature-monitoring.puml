@@ -1,0 +1,28 @@
+@startuml diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Smart Home API - Component Diagram (C4 Level 3)
+
+Container_Boundary(smart_home, "Smart Home API (Go + Gin : 8080)") {
+    Container(sensor_api, "Sensor API", "Gin", "REST endpoints для управления сенсорами и получения температуры")
+    
+    Container(sensor_handler, "SensorHandler", "Handler", "Обработка HTTP запросов сенсоров")
+    Container(temperature_service, "TemperatureService", "HTTP Client", "Внешний HTTP клиент для Temperature API")
+    ContainerDb(sensor_repo, "Sensor Repository", "Data Access Layer", "CRUD операции с сенсорами")
+    
+    ContainerDb(sensor_db, "Smart Home DB", "PostgreSQL", "Хранение сенсоров")
+}
+
+System_Ext(external_temp_api, "External Temperature API", "Внешний сервис", "Данные о температуре")
+
+Rel(sensor_api, sensor_handler, "Делегирует запросы")
+Rel(sensor_handler, temperature_service, "Использует")
+Rel(sensor_handler, sensor_repo, "Использует")
+Rel(sensor_repo, sensor_db, "Чтение/запись", "PostgreSQL Protocol")
+
+Rel(temperature_service, external_temp_api, "GET /temperature", "HTTP/REST")
+Rel(temperature_service, external_temp_api, "GET /temperature/:id", "HTTP/REST")
+
+@enduml

@@ -1,0 +1,508 @@
+# NOTE: This API spec describes a planned Notification Service that is NOT YET IMPLEMENTED
+# The notification service is part of the target architecture but has not been built.
+
+openapi: 3.0.3
+info:
+  title: Notification Service API (Planned)
+  description: |
+    API для управления уведомлениями и шаблонами оповещений.
+    
+    **СТАТУС: Запланирован, не реализован.**
+  version: 1.0.0
+  contact:
+    name: Smart Home Team
+servers:
+  - url: http://localhost:8085/api/v1
+    description: Локальный сервер разработки
+tags:
+  - name: notifications
+    description: Операции с уведомлениями
+  - name: templates
+    description: Шаблоны уведомлений
+  - name: preferences
+    description: Настройки уведомлений
+paths:
+  /notifications:
+    get:
+      tags:
+        - notifications
+      summary: Получить список уведомлений
+      description: Возвращает список уведомлений с поддержкой пагинации и фильтрации
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - unread
+              - read
+              - all
+          description: Фильтр по статусу прочтения
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - alert
+              - info
+              - warning
+              - error
+          description: Фильтр по типу уведомления
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Номер страницы
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+          description: Количество элементов на странице
+      responses:
+        '200':
+          description: Список уведомлений получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationList'
+    post:
+      tags:
+        - notifications
+      summary: Создать уведомление
+      description: Создаёт новое уведомление (обычно вызывается другими сервисами через события)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationCreate'
+      responses:
+        '201':
+          description: Уведомление создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '400':
+          description: Некорректные data
+  /notifications/{id}:
+    get:
+      tags:
+        - notifications
+      summary: Получить уведомление по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Уведомление найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '404':
+          description: Уведомление не найдено
+    delete:
+      tags:
+        - notifications
+      summary: Удалить уведомление
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Уведомление удалено
+        '404':
+          description: Уведомление не найдено
+  /notifications/{id}/read:
+    put:
+      tags:
+        - notifications
+      summary: Отметить уведомление как прочитанное
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Уведомление отмечено как прочитанное
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '404':
+          description: Уведомление не найдено
+  /notifications/unread-count:
+    get:
+      tags:
+        - notifications
+      summary: Получить количество непрочитанных уведомлений
+      responses:
+        '200':
+          description: Количество непрочитанных уведомлений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadCount'
+  /notifications/templates:
+    get:
+      tags:
+        - templates
+      summary: Получить список шаблонов
+      responses:
+        '200':
+          description: Список шаблонов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationTemplate'
+    post:
+      tags:
+        - templates
+      summary: Создать шаблон уведомления
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateCreate'
+      responses:
+        '201':
+          description: Шаблон создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTemplate'
+        '400':
+          description: Некорректные data
+  /notifications/templates/{id}:
+    put:
+      tags:
+        - templates
+      summary: Обновить шаблон
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateUpdate'
+      responses:
+        '200':
+          description: Шаблон обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTemplate'
+        '404':
+          description: Шаблон не найден
+    delete:
+      tags:
+        - templates
+      summary: Удалить шаблон
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Шаблон удалён
+        '404':
+          description: Шаблон не найден
+  /notifications/preferences:
+    get:
+      tags:
+        - preferences
+      summary: Получить настройки уведомлений пользователя
+      responses:
+        '200':
+          description: Настройки получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+    put:
+      tags:
+        - preferences
+      summary: Обновить настройки уведомлений
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferencesUpdate'
+      responses:
+        '200':
+          description: Настройки обновлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+components:
+  schemas:
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+          enum:
+            - alert
+            - info
+            - warning
+            - error
+        status:
+          type: string
+          enum:
+            - unread
+            - read
+        source:
+          type: string
+          description: Сервис-источник уведомления
+        relatedEntityId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID связанной сущности (устройство, алерт и т.д.)
+        createdAt:
+          type: string
+          format: date-time
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+    NotificationList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+    NotificationCreate:
+      type: object
+      required:
+        - title
+        - message
+        - type
+      properties:
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+          enum:
+            - alert
+            - info
+            - warning
+            - error
+        source:
+          type: string
+        relatedEntityId:
+          type: string
+          format: uuid
+          nullable: true
+        sendEmail:
+          type: boolean
+          default: false
+        sendPush:
+          type: boolean
+          default: false
+    NotificationTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        eventType:
+          type: string
+          description: Тип события для которого применяется шаблон
+        subjectTemplate:
+          type: string
+          description: Шаблон темы уведомления (может содержать переменные)
+        bodyTemplate:
+          type: string
+          description: Шаблон тела уведомления
+        channels:
+          type: array
+          items:
+            type: string
+            enum:
+              - email
+              - push
+              - sms
+              - web
+        enabled:
+          type: boolean
+          default: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    TemplateCreate:
+      type: object
+      required:
+        - name
+        - eventType
+        - subjectTemplate
+        - bodyTemplate
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        eventType:
+          type: string
+        subjectTemplate:
+          type: string
+        bodyTemplate:
+          type: string
+        channels:
+          type: array
+          items:
+            type: string
+            enum:
+              - email
+              - push
+              - sms
+              - web
+    TemplateUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        subjectTemplate:
+          type: string
+        bodyTemplate:
+          type: string
+        channels:
+          type: array
+          items:
+            type: string
+            enum:
+              - email
+              - push
+              - sms
+              - web
+        enabled:
+          type: boolean
+    UserPreferences:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        emailEnabled:
+          type: boolean
+          default: true
+        pushEnabled:
+          type: boolean
+          default: true
+        smsEnabled:
+          type: boolean
+          default: false
+        quietHours:
+          $ref: '#/components/schemas/QuietHours'
+        alertTypes:
+          type: array
+          items:
+            type: string
+            enum:
+              - alert
+              - info
+              - warning
+              - error
+          description: Типы уведомлений, которые пользователь хочет получать
+    QuietHours:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          default: false
+        startTime:
+          type: string
+          format: time
+          example: "22:00:00"
+        endTime:
+          type: string
+          format: time
+          example: "08:00:00"
+    PreferencesUpdate:
+      type: object
+      properties:
+        emailEnabled:
+          type: boolean
+        pushEnabled:
+          type: boolean
+        smsEnabled:
+          type: boolean
+        quietHours:
+          $ref: '#/components/schemas/QuietHours'
+        alertTypes:
+          type: array
+          items:
+            type: string
+            enum:
+              - alert
+              - info
+              - warning
+              - error
+    UnreadCount:
+      type: object
+      properties:
+        total:
+          type: integer
+        byType:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Количество непрочитанных по типам

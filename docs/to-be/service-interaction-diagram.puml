@@ -1,0 +1,54 @@
+@startuml
+title Взаимодействие между сервисами (Круговая схема)
+
+skinparam backgroundColor #F5F5F5
+skinparam componentStyle rectangle
+skinparam arrowFontSize 11
+skinparam nodesep 30
+skinparam ranksep 40
+
+' --- Участники (в порядке круга) ---
+component "Person/System" as Person
+component "smart_home\n(Go + Gin : 8080)" as SmartHome
+component "telemetry-service\n(Go + Gin : 8083)" as Telemetry
+component "device-management\n(Go + Gin : 8082)" as DeviceMgmt
+database "smart_home_db" as SHDB
+database "telemetry_db" as TDB
+database "device_db" as DDB
+
+' --- Скрытые связи для круга ---
+Person -[hidden]- SmartHome
+SmartHome -[hidden]- Telemetry
+Telemetry -[hidden]- DeviceMgmt
+DeviceMgmt -[hidden]- DDB
+DDB -[hidden]- TDB
+TDB -[hidden]- SHDB
+SHDB -[hidden]- Person
+
+' --- Реальные взаимодействия ---
+
+' Клиентские запросы (Синий: HTTP/REST)
+Person -[#007ACC]> SmartHome : HTTP/REST\nCRUD операции
+Person -[#007ACC]> DeviceMgmt : HTTP/REST\nУправление устройствами
+Person -[#007ACC]> Telemetry : HTTP/REST + WS\nТелеметрия realtime
+
+' SmartHome взаимодействия
+SmartHome -[#FF5733]> SHDB : TCP/5432\nSQL CRUD
+
+' Device Management взаимодействия
+DeviceMgmt -[#FF5733]> DDB : TCP/5432\nSQL CRUD
+DeviceMgmt -[#FFC300]> Telemetry : HTTP Webhook\nPOST /webhooks/device.*
+
+' Telemetry взаимодействия
+Telemetry -[#FF5733]> TDB : TCP/5432\nSQL CRUD
+Telemetry -[#FFC300]> DeviceMgmt : HTTP Webhook\nPOST /webhooks/telemetry.*
+
+legend right
+  <b>Тип взаимодействия (цвет стрелки)</b>
+  <back:#007ACC> <b>HTTP/REST</b> Синхронный API запрос 
+  <back:#FF5733> <b>TCP/5432 (DB)</b>  Прямое подключение к БД
+  <back:#FFC300> <b>HTTP Webhook</b>  Асинхронное уведомление
+end legend
+
+
+@enduml
